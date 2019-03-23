@@ -2477,6 +2477,19 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option,
   case CURLOPT_FNMATCH_DATA:
     data->set.fnmatch_data = va_arg(param, void *);
     break;
+#if defined(USE_TLS_SRP) || defined(USE_TLS_PSK)
+  case CURLOPT_TLSAUTH_TYPE:
+    argptr = va_arg(param, char *);
+    if(!argptr ||
+       strncasecompare(argptr, "SRP", strlen("SRP")))
+      data->set.ssl.authtype = CURL_TLSAUTH_SRP;
+    else if(!argptr ||
+      strncasecompare(argptr, "PSK", strlen("PSK")))
+      data->set.ssl.authtype = CURL_TLSAUTH_PSK;
+    else
+      data->set.ssl.authtype = CURL_TLSAUTH_NONE;
+    break;
+#endif
 #ifdef USE_TLS_SRP
   case CURLOPT_TLSAUTH_USERNAME:
     result = Curl_setstropt(&data->set.str[STRING_TLSAUTH_USERNAME_ORIG],
@@ -2504,14 +2517,6 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option,
        !data->set.proxy_ssl.authtype)
       data->set.proxy_ssl.authtype = CURL_TLSAUTH_SRP; /* default to SRP */
     break;
-  case CURLOPT_TLSAUTH_TYPE:
-    argptr = va_arg(param, char *);
-    if(!argptr ||
-       strncasecompare(argptr, "SRP", strlen("SRP")))
-      data->set.ssl.authtype = CURL_TLSAUTH_SRP;
-    else
-      data->set.ssl.authtype = CURL_TLSAUTH_NONE;
-    break;
   case CURLOPT_PROXY_TLSAUTH_TYPE:
     argptr = va_arg(param, char *);
     if(!argptr ||
@@ -2521,6 +2526,22 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option,
       data->set.proxy_ssl.authtype = CURL_TLSAUTH_NONE;
     break;
 #endif
+
+#ifdef USE_TLS_PSK
+  case CURLOPT_TLSAUTH_IDENTITY:
+    result = Curl_setstropt(&data->set.str[STRING_TLSAUTH_IDENTITY_ORIG],
+                            va_arg(param, char *));
+    if(data->set.str[STRING_TLSAUTH_IDENTITY_ORIG] && !data->set.ssl.authtype)
+      data->set.ssl.authtype = CURL_TLSAUTH_PSK; /* default to PSK */
+    break;
+  case CURLOPT_TLSAUTH_PSK:
+    result = Curl_setstropt(&data->set.str[STRING_TLSAUTH_PSK_ORIG],
+                            va_arg(param, char *));
+    if(data->set.str[STRING_TLSAUTH_PSK_ORIG] && !data->set.ssl.authtype)
+      data->set.ssl.authtype = CURL_TLSAUTH_PSK; /* default to PSK */
+    break;
+#endif
+
   case CURLOPT_DNS_SERVERS:
     result = Curl_set_dns_servers(data, va_arg(param, char *));
     break;

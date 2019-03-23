@@ -161,6 +161,7 @@ dnl initialize all the info variables
  curl_brotli_msg="no      (--with-brotli)"
     curl_gss_msg="no      (--with-gssapi)"
 curl_tls_srp_msg="no      (--enable-tls-srp)"
+curl_tls_psk_msg="no      (--enable-tls-psk)"
     curl_res_msg="default (--enable-ares / --enable-threaded-resolver)"
    curl_ipv6_msg="no      (--enable-ipv6)"
 curl_unix_sockets_msg="no      (--enable-unix-sockets)"
@@ -1876,6 +1877,17 @@ if test "$OPENSSL_ENABLED" = "1"; then
    [
      AC_DEFINE(HAVE_OPENSSL_SRP, 1, [if you have the function SRP_Calc_client_key])
      AC_SUBST(HAVE_OPENSSL_SRP, [1])
+   ])
+fi
+
+dnl ---
+dnl We require OpenSSL with PSK support.
+dnl ---
+if test "$OPENSSL_ENABLED" = "1"; then
+  AC_CHECK_LIB(crypto, SSL_set_psk_client_callback,
+   [
+     AC_DEFINE(HAVE_OPENSSL_PSK, 1, [if you have the function SSL_set_psk_client_callback])
+     AC_SUBST(HAVE_OPENSSL_PSK, [1])
    ])
 fi
 
@@ -3984,6 +3996,34 @@ if test "$want_tls_srp" = "yes" && ( test "x$HAVE_GNUTLS_SRP" = "x1" || test "x$
 fi
 
 dnl ************************************************************
+dnl disable TLS-PSK authentication
+dnl
+AC_MSG_CHECKING([whether to enable TLS-PSK authentication and key exchange])
+AC_ARG_ENABLE(tls-psk,
+AC_HELP_STRING([--enable-tls-psk],[Enable TLS-PSK authentication and key exchange])
+AC_HELP_STRING([--disable-tls-psk],[Disable TLS-PSK authentication and key exchange]),
+[ case "$enableval" in
+  no)
+       AC_MSG_RESULT(no)
+       AC_DEFINE(CURL_DISABLE_TLS_PSK, 1, [to disable TLS-PSK authentication])
+       want_tls_psk=no
+       ;;
+  *)   AC_MSG_RESULT(yes)
+       want_tls_psk=yes
+       ;;
+  esac ],
+       AC_MSG_RESULT(yes)
+       want_tls_psk=yes
+)
+
+if test "$want_tls_psk" = "yes" && ( test "x$HAVE_GNUTLS_PSK" = "x1" || test "x$HAVE_OPENSSL_PSK" = "x1") ; then
+   AC_DEFINE(USE_TLS_PSK, 1, [Use TLS-PSK authentication])
+   USE_TLS_PSK=1
+   curl_tls_psk_msg="enabled"
+fi
+
+
+dnl ************************************************************
 dnl disable Unix domain sockets support
 dnl
 AC_MSG_CHECKING([whether to enable Unix domain sockets])
@@ -4308,6 +4348,7 @@ AC_MSG_NOTICE([Configured to build curl/libcurl:
   brotli support:   ${curl_brotli_msg}
   GSS-API support:  ${curl_gss_msg}
   TLS-SRP support:  ${curl_tls_srp_msg}
+  TLS-PSK support:  ${curl_tls_psk_msg}
   resolver:         ${curl_res_msg}
   IPv6 support:     ${curl_ipv6_msg}
   Unix sockets support: ${curl_unix_sockets_msg}

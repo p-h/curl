@@ -1894,6 +1894,12 @@ typedef enum {
   /* set this to 1L to allow HTTP/0.9 responses or 0L to disallow */
   CINIT(HTTP09_ALLOWED, LONG, 285),
 
+  /* Set a identity for authenticated TLS */
+  CINIT(TLSAUTH_IDENTITY, STRINGPOINT, 286),
+
+  /* Set a pre shared key for authenticated TLS */
+  CINIT(TLSAUTH_PSK, STRINGPOINT, 287),
+
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
 
@@ -2015,6 +2021,7 @@ enum {
 enum CURL_TLSAUTH {
   CURL_TLSAUTH_NONE,
   CURL_TLSAUTH_SRP,
+  CURL_TLSAUTH_PSK,
   CURL_TLSAUTH_LAST /* never use, keep last */
 };
 
@@ -2756,6 +2763,7 @@ typedef struct {
 #define CURL_VERSION_HTTPS_PROXY  (1<<21) /* HTTPS-proxy support built-in */
 #define CURL_VERSION_MULTI_SSL    (1<<22) /* Multiple SSL backends available */
 #define CURL_VERSION_BROTLI       (1<<23) /* Brotli features are present. */
+#define CURL_VERSION_TLSAUTH_PSK  (1<<24) /* TLS-PSK auth is supported */
 
  /*
  * NAME curl_version_info()

@@ -81,6 +81,8 @@ struct OperationConfig {
   char *dns_ipv6_addr; /* dot notation */
   char *userpwd;
   char *login_options;
+  char *tls_psk_identity;
+  char *tls_psk_file;
   char *tls_username;
   char *tls_password;
   char *tls_authtype;

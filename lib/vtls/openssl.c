@@ -2277,6 +2277,104 @@ static int ossl_new_session_cb(SSL *ssl, SSL_SESSION *ssl_sessionid)
   return res;
 }
 
+#ifdef USE_TLS_PSK
+#define MAX_PSK_LENGTH 512 /* TODO: Is this enough? */
+
+static
+int psk_session_callback (
+  SSL *ssl,
+  const EVP_MD *md,
+  const unsigned char **id,
+  size_t *idlen,
+  SSL_SESSION **sess)
+{
+  /* TODO: Find a better place for this */
+  static const unsigned char tls13_aes128gcmsha256_id[] = { 0x13, 0x01 };
+
+  SSL_SESSION *my_sess = NULL; SSL_CIPHER *my_cipher = NULL;
+  char *psk_file_name = NULL; FILE *psk_file = NULL;
+  int conn_index = 0; struct Curl_easy *data = NULL;
+  int psk_len = 0; unsigned char my_psk[MAX_PSK_LENGTH] = { 0 };
+  size_t my_idlen = 0; unsigned char *my_id = NULL;
+  int c = 0;
+
+  conn_index = ossl_get_ssl_conn_index();
+  data = ((struct connectdata *)SSL_get_ex_data(ssl, conn_index))->data;
+  psk_file_name = data->set.ssl.psk_file_name;
+
+  if(md) {
+    /* TODO: correctly handle this */
+    return 0;
+  }
+
+  infof(data, "Reading PSK-file %s\n", psk_file_name);
+  if(!data->set.ssl.psk_identity) {
+    failf(data, "PSK-identity not set ");
+    return 0;
+  }
+
+  my_id = (unsigned char *)data->set.ssl.psk_identity;
+  my_idlen = strlen(data->set.ssl.psk_identity);
+
+  psk_file = fopen(psk_file_name, "rb");
+  if(!psk_file) {
+    failf(data, "Failed reading PSK-file %s", psk_file_name);
+    return 0;
+  }
+  for(c = getc(psk_file); c != -1; c = getc(psk_file)) {
+    if(psk_len >= MAX_PSK_LENGTH) {
+      fclose(psk_file);
+      failf(data, "The PSK provided is long than the supported %d",
+          MAX_PSK_LENGTH);
+      return 0;
+    }
+    my_psk[psk_len] = (unsigned char) c;
+    psk_len++;
+  }
+  fclose(psk_file);
+
+  my_sess = SSL_get1_session(ssl);
+
+  if(!SSL_SESSION_set1_master_key(my_sess, my_psk, psk_len)) {
+    failf(data, "Failed setting master key");
+    return 0;
+  }
+
+  /* TODO perhaps make this more flexible */
+  /* only the handshake digest is relevant */
+  my_cipher = SSL_SESSION_get0_cipher(my_sess);
+
+  if(!my_cipher) {
+    my_cipher = SSL_CIPHER_find(ssl, tls13_aes128gcmsha256_id);
+  }
+
+  if(!SSL_SESSION_set_cipher(my_sess, my_cipher)) {
+    failf(data, "Failed setting cipher");
+    return 0;
+  }
+
+  if(!SSL_SESSION_set_protocol_version(my_sess, TLS1_3_VERSION)) {
+    failf(data, "Failed to set TLS version to 1.3");
+    return 0;
+  }
+
+/*
+ * TODO: maybe enable
+ * Additionally the maximum early data value should be set via a call to
+ * SSL_SESSION_set_max_early_data(3) if the PSK will be used for sending
+ * early data.
+ */
+
+  SSL_SESSION_set_max_early_data(my_sess, 0);
+
+  *id = my_id;
+  *idlen = my_idlen;
+  *sess = my_sess;
+
+  return 1;
+}
+#endif
+
 static CURLcode ossl_connect_step1(struct connectdata *conn, int sockindex)
 {
   CURLcode result = CURLE_OK;
@@ -2300,7 +2398,7 @@ static CURLcode ossl_connect_step1(struct connectdata *conn, int sockindex)
   long * const certverifyresult = SSL_IS_PROXY() ?
     &data->set.proxy_ssl.certverifyresult : &data->set.ssl.certverifyresult;
   const long int ssl_version = SSL_CONN_CONFIG(version);
-#ifdef USE_TLS_SRP
+#if defined(USE_TLS_SRP) || defined(USE_TLS_PSK)
   const enum CURL_TLSAUTH ssl_authtype = SSL_SET_OPTION(authtype);
 #endif
   char * const ssl_cert = SSL_SET_OPTION(cert);
@@ -2588,6 +2686,22 @@ static CURLcode ossl_connect_step1(struct connectdata *conn, int sockindex)
         failf(data, "failed setting SRP cipher list");
         return CURLE_SSL_CIPHER;
       }
+    }
+  }
+#endif
+
+#ifdef USE_TLS_PSK
+/* TODO: possibly handle 1.2 PSK once you figure out how to check for tls
+ * version at this point
+ * SSL_CTX_set_psk_client_callback is for 1.2
+ * SSL_CTX_set_psk_use_session_callback is for 1.3 */
+  if(ssl_authtype == CURL_TLSAUTH_PSK) {
+    char * const psk_identity = SSL_SET_OPTION(psk_identity);
+
+    infof(data, "Using TLS-PSK identity: %s\n", psk_identity);
+
+    if(ssl_authtype == CURL_TLSAUTH_PSK) {
+      SSL_CTX_set_psk_use_session_callback(BACKEND->ctx, psk_session_callback);
     }
   }
 #endif

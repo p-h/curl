@@ -264,6 +264,8 @@ static const struct LongShort aliases[]= {
   {"E9", "proxy-tlsv1",              ARG_NONE},
   {"EA", "socks5-basic",             ARG_BOOL},
   {"EB", "socks5-gssapi",            ARG_BOOL},
+  {"EC", "tlsidentity",              ARG_STRING},
+  {"ED", "tlspsk",                   ARG_FILENAME},
   {"f",  "fail",                     ARG_BOOL},
   {"fa", "fail-early",               ARG_BOOL},
   {"fb", "styled-output",            ARG_BOOL},
@@ -1532,10 +1534,13 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
           return PARAM_LIBCURL_DOESNT_SUPPORT;
         break;
       case 'm': /* TLS authentication type */
-        if(curlinfo->features & CURL_VERSION_TLSAUTH_SRP) {
+        if((curlinfo->features & CURL_VERSION_TLSAUTH_SRP) ||
+                (curlinfo->features & CURL_VERSION_TLSAUTH_PSK)) {
           GetStr(&config->tls_authtype, nextarg);
-          if(!curl_strequal(config->tls_authtype, "SRP"))
-            return PARAM_LIBCURL_DOESNT_SUPPORT; /* only support TLS-SRP */
+          if(!(curl_strequal(config->tls_authtype, "SRP") ||
+                      curl_strequal(config->tls_authtype, "PSK")))
+            /* only support TLS-SRP  and TLS-PSK */
+            return PARAM_LIBCURL_DOESNT_SUPPORT;
         }
         else
           return PARAM_LIBCURL_DOESNT_SUPPORT;
@@ -1668,6 +1673,18 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
           config->socks5_auth |= CURLAUTH_GSSAPI;
         else
           config->socks5_auth &= ~CURLAUTH_GSSAPI;
+        break;
+      case 'C': /* TLS-PSK identity */
+        if(curlinfo->features & CURL_VERSION_TLSAUTH_PSK)
+          GetStr(&config->tls_psk_identity, nextarg);
+        else
+          return PARAM_LIBCURL_DOESNT_SUPPORT;
+        break;
+      case 'D': /* TLS-PSK */
+        if(curlinfo->features & CURL_VERSION_TLSAUTH_PSK)
+          GetStr(&config->tls_psk_file, nextarg);
+        else
+          return PARAM_LIBCURL_DOESNT_SUPPORT;
         break;
 
       default: /* unknown flag */

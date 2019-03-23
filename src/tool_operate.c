@@ -1444,6 +1444,13 @@ static CURLcode operate_do(struct GlobalConfig *global,
           /* new in 7.49.0 */
           my_setopt_slist(curl, CURLOPT_CONNECT_TO, config->connect_to);
 
+        if((curlinfo->features & CURL_VERSION_TLSAUTH_SRP) ||
+                (curlinfo->features & CURL_VERSION_TLSAUTH_PSK)) {
+          if(config->tls_authtype)
+            my_setopt_str(curl, CURLOPT_TLSAUTH_TYPE,
+                          config->tls_authtype);
+        }
+
         /* new in 7.21.4 */
         if(curlinfo->features & CURL_VERSION_TLSAUTH_SRP) {
           if(config->tls_username)
@@ -1452,9 +1459,6 @@ static CURLcode operate_do(struct GlobalConfig *global,
           if(config->tls_password)
             my_setopt_str(curl, CURLOPT_TLSAUTH_PASSWORD,
                           config->tls_password);
-          if(config->tls_authtype)
-            my_setopt_str(curl, CURLOPT_TLSAUTH_TYPE,
-                          config->tls_authtype);
           if(config->proxy_tls_username)
             my_setopt_str(curl, CURLOPT_PROXY_TLSAUTH_USERNAME,
                           config->proxy_tls_username);
@@ -1533,6 +1537,15 @@ static CURLcode operate_do(struct GlobalConfig *global,
 
         if(config->disallow_username_in_url)
           my_setopt(curl, CURLOPT_DISALLOW_USERNAME_IN_URL, 1L);
+
+        if(curlinfo->features & CURL_VERSION_TLSAUTH_PSK) {
+          if(config->tls_psk_identity)
+            my_setopt_str(curl, CURLOPT_TLSAUTH_IDENTITY,
+                          config->tls_psk_identity);
+          if(config->tls_psk_file)
+            my_setopt_str(curl, CURLOPT_TLSAUTH_PSK,
+                          config->tls_psk_file);
+        }
 
         /* initialize retry vars for loop below */
         retry_sleep_default = (config->retry_delay) ?

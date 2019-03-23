@@ -241,10 +241,16 @@ struct ssl_config_data {
   char *key_type; /* format for private key (default: PEM) */
   char *key_passwd; /* plain text private key password */
 
+#if defined(USE_TLS_SRP) || defined(USE_TLS_PSK)
+  enum CURL_TLSAUTH authtype; /* TLS authentication type (default SRP) */
+#endif
 #ifdef USE_TLS_SRP
   char *username; /* TLS username (for, e.g., SRP) */
   char *password; /* TLS password (for, e.g., SRP) */
-  enum CURL_TLSAUTH authtype; /* TLS authentication type (default SRP) */
+#endif
+#ifdef USE_TLS_PSK
+  char *psk_identity;
+  char *psk_file_name;
 #endif
 };
 
@@ -1502,6 +1508,11 @@ enum dupstring {
 #endif
   STRING_TARGET,                /* CURLOPT_REQUEST_TARGET */
   STRING_DOH,                   /* CURLOPT_DOH_URL */
+
+#ifdef USE_TLS_PSK
+  STRING_TLSAUTH_PSK_ORIG,
+  STRING_TLSAUTH_IDENTITY_ORIG,
+#endif
   /* -- end of zero-terminated strings -- */
 
   STRING_LASTZEROTERMINATED,

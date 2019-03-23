@@ -366,6 +366,9 @@ static curl_version_info_data version_info = {
 #if defined(HAVE_BROTLI)
   | CURL_VERSION_BROTLI
 #endif
+#if defined(USE_TLS_PSK)
+  | CURL_VERSION_TLSAUTH_PSK
+#endif
   ,
   NULL, /* ssl_version */
   0,    /* ssl_version_num, this is kept at zero */

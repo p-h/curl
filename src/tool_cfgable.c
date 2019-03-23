@@ -69,6 +69,8 @@ static void free_config_fields(struct OperationConfig *config)
   Curl_safefree(config->userpwd);
   Curl_safefree(config->tls_username);
   Curl_safefree(config->tls_password);
+  Curl_safefree(config->tls_psk_file);
+  Curl_safefree(config->tls_psk_identity);
   Curl_safefree(config->tls_authtype);
   Curl_safefree(config->proxy_tls_username);
   Curl_safefree(config->proxy_tls_password);

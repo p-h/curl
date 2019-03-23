@@ -3850,6 +3850,10 @@ static CURLcode create_conn(struct Curl_easy *data,
   data->set.ssl.password = data->set.str[STRING_TLSAUTH_PASSWORD_ORIG];
   data->set.proxy_ssl.password = data->set.str[STRING_TLSAUTH_PASSWORD_PROXY];
 #endif
+#ifdef USE_TLS_PSK
+  data->set.ssl.psk_identity = data->set.str[STRING_TLSAUTH_IDENTITY_ORIG];
+  data->set.ssl.psk_file_name = data->set.str[STRING_TLSAUTH_PSK_ORIG];
+#endif
 
   if(!Curl_clone_primary_ssl_config(&data->set.ssl.primary,
      &conn->ssl_config)) {
