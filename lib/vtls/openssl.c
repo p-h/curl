@@ -2303,7 +2303,7 @@ int psk_session_callback (
   psk_file_name = data->set.ssl.psk_file_name;
 
   if(md) {
-    /* TODO: correctly handle this */
+    failf(data, "psk_session_callback called twice");
     return 0;
   }
 
@@ -2333,7 +2333,7 @@ int psk_session_callback (
   }
   fclose(psk_file);
 
-  my_sess = SSL_get1_session(ssl);
+  my_sess = SSL_SESSION_new();
 
   if(!SSL_SESSION_set1_master_key(my_sess, my_psk, psk_len)) {
     failf(data, "Failed setting master key");
@@ -2357,15 +2357,6 @@ int psk_session_callback (
     failf(data, "Failed to set TLS version to 1.3");
     return 0;
   }
-
-/*
- * TODO: maybe enable
- * Additionally the maximum early data value should be set via a call to
- * SSL_SESSION_set_max_early_data(3) if the PSK will be used for sending
- * early data.
- */
-
-  SSL_SESSION_set_max_early_data(my_sess, 0);
 
   *id = my_id;
   *idlen = my_idlen;
