@@ -2289,7 +2289,9 @@ int psk_session_callback (
   SSL_SESSION **sess)
 {
   /* TODO: Find a better place for this */
-  static const unsigned char tls13_aes128gcmsha256_id[] = { 0x13, 0x01 };
+  static const unsigned char tls_aes128gcmsha256_id[] = { 0x13, 0x01 };
+  static const unsigned char tls_aes256gcmsha384_id[] = { 0x13, 0x02 };
+  static const unsigned char tls_chacha20_poly1305_sha256[] = { 0x13, 0x03 };
 
   SSL_SESSION *my_sess = NULL; SSL_CIPHER *my_cipher = NULL;
   char *psk_file_name = NULL; FILE *psk_file = NULL;
@@ -2345,7 +2347,7 @@ int psk_session_callback (
   my_cipher = SSL_SESSION_get0_cipher(my_sess);
 
   if(!my_cipher) {
-    my_cipher = SSL_CIPHER_find(ssl, tls13_aes128gcmsha256_id);
+    my_cipher = SSL_CIPHER_find(ssl, tls_aes256gcmsha384_id);
   }
 
   if(!SSL_SESSION_set_cipher(my_sess, my_cipher)) {
